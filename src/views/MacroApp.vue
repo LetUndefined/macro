@@ -237,10 +237,10 @@ onUnmounted(() => clearInterval(timer))
                   <span :class="'sig sig-' + p.quote_signal">{{ p.quote_currency }}: {{ p.quote_signal }}</span>
                 </td>
                 <td :class="'strength-' + p.divergence_strength">{{ p.divergence_strength === 'strong' ? 'strong' : 'mod' }}</td>
-                <td class="td-check"><span :class="p.trends.baseCpi.cls">{{ p.trends.baseCpi.arrow }}</span></td>
-                <td class="td-check"><span :class="p.trends.quoteCpi.cls">{{ p.trends.quoteCpi.arrow }}</span></td>
-                <td class="td-check"><span :class="p.trends.baseLabour.cls">{{ p.trends.baseLabour.arrow }}</span></td>
-                <td class="td-check"><span :class="p.trends.quoteLabour.cls">{{ p.trends.quoteLabour.arrow }}</span></td>
+                <td class="td-check"><span :class="p.checks.baseCpiRising  ? 'arrow good' : 'arrow bad'">{{ p.checks.baseCpiRising  ? '↑' : '↓' }}</span></td>
+                <td class="td-check"><span :class="p.checks.quoteCpiFalling ? 'arrow good' : 'arrow bad'">{{ p.checks.quoteCpiFalling ? '↑' : '↓' }}</span></td>
+                <td class="td-check"><span :class="p.checks.baseLabourTight ? 'arrow good' : 'arrow bad'">{{ p.checks.baseLabourTight ? '↑' : '↓' }}</span></td>
+                <td class="td-check"><span :class="p.checks.quoteLabourSoft ? 'arrow good' : 'arrow bad'">{{ p.checks.quoteLabourSoft ? '↑' : '↓' }}</span></td>
               </tr>
             </tbody>
           </table>

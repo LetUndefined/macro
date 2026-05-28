@@ -53,22 +53,34 @@ function enrichPair(p: typeof pairs.value[number]) {
   const base  = readings.value.find(r => r.currency === p.base_currency)
   const quote = readings.value.find(r => r.currency === p.quote_currency)
 
+  const baseCpiTrend    = base?.cpi_trend    ?? 'flat'
+  const quoteCpiTrend   = quote?.cpi_trend   ?? 'flat'
+  const baseLabourTrend = base?.labour_trend ?? 'flat'
+  const quoteLabourTrend = quote?.labour_trend ?? 'flat'
+
   const checks = {
-    baseCpiRising:   base?.cpi_trend    === 'rising',
-    quoteCpiFalling: quote?.cpi_trend   === 'falling',
-    baseLabourTight: base?.labour_trend === 'tightening',
-    quoteLabourSoft: quote?.labour_trend === 'softening',
+    baseCpiRising:   baseCpiTrend    === 'rising',
+    quoteCpiFalling: quoteCpiTrend   === 'falling',
+    baseLabourTight: baseLabourTrend === 'tightening',
+    quoteLabourSoft: quoteLabourTrend === 'softening',
   }
 
   const trends = {
-    baseCpi:    arrowFromTrend(base?.cpi_trend    ?? 'flat'),
-    quoteCpi:   arrowFromTrend(quote?.cpi_trend   ?? 'flat'),
-    baseLabour: arrowFromTrend(base?.labour_trend ?? 'flat'),
-    quoteLabour:arrowFromTrend(quote?.labour_trend ?? 'flat'),
+    baseCpi:    arrowFromTrend(baseCpiTrend),
+    quoteCpi:   arrowFromTrend(quoteCpiTrend),
+    baseLabour: arrowFromTrend(baseLabourTrend),
+    quoteLabour:arrowFromTrend(quoteLabourTrend),
   }
 
-  const score = (p.divergence_strength === 'strong' ? 2 : 1)
-    + Object.values(checks).filter(Boolean).length
+  // Reward confirming trends, penalise contradicting ones
+  let score = p.divergence_strength === 'strong' ? 2 : 1
+  if (baseCpiTrend    === 'rising')     score += 1
+  if (baseCpiTrend    === 'falling')    score -= 1   // base losing inflation = bad
+  if (quoteCpiTrend   === 'falling')    score += 1
+  if (quoteCpiTrend   === 'rising')     score -= 1   // quote gaining inflation = bad
+  if (baseLabourTrend === 'tightening') score += 1
+  if (quoteLabourTrend === 'softening') score += 1
+
   return { ...p, checks, trends, score }
 }
 

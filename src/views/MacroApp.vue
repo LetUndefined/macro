@@ -210,7 +210,7 @@ onUnmounted(() => clearInterval(timer))
               <tr
                 v-for="p in scoredPairs"
                 :key="p.pair"
-                :class="{ 'pair-strong': p.divergence_strength === 'strong', 'pair-highlight': p.highlight }"
+                :class="{ 'pair-highlight': p.divergence_strength === 'strong' }"
               >
                 <td class="td-pair">
                   {{ p.pair }}

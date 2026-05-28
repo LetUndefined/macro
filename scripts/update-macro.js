@@ -65,16 +65,7 @@ const FRED_SERIES = {
   SEK: { coreSeries: 'CPALTT01SEM659N',   coreUnits: null,   unempSeries: 'LRHUTTTTSEM156S' },
 }
 
-const G10_PAIRS = [
-  'USD/EUR', 'USD/GBP', 'USD/JPY', 'USD/CAD', 'USD/AUD', 'USD/NZD', 'USD/CHF', 'USD/NOK', 'USD/SEK',
-  'EUR/GBP', 'EUR/JPY', 'EUR/CAD', 'EUR/AUD', 'EUR/NZD', 'EUR/CHF', 'EUR/NOK', 'EUR/SEK',
-  'GBP/JPY', 'GBP/CAD', 'GBP/AUD', 'GBP/NZD', 'GBP/CHF', 'GBP/NOK', 'GBP/SEK',
-  'AUD/JPY', 'AUD/CAD', 'AUD/NZD', 'AUD/CHF', 'AUD/NOK', 'AUD/SEK',
-  'NZD/JPY', 'NZD/CAD', 'NZD/CHF', 'NZD/NOK', 'NZD/SEK',
-  'NOK/JPY', 'NOK/CAD', 'NOK/CHF', 'NOK/SEK',
-  'CAD/JPY', 'CAD/CHF', 'CAD/SEK',
-  'SEK/JPY', 'SEK/CHF',
-]
+const SIGNAL_RANK = { overheating: 3, elevated: 2, easing: 1, deflationary: 0 }
 
 // ── FRED API ─────────────────────────────────────────────────────────────────
 
@@ -166,28 +157,30 @@ function buildContext(currency, coreCpi, cpiDate, unemp, unempDate, signal) {
 // ── Divergence pair generation ───────────────────────────────────────────────
 
 function generatePairs(readings, today) {
-  const signalMap = Object.fromEntries(readings.map(r => [r.currency, r.signal]))
   const pairs = []
+  const currencies = Object.keys(G10_CONFIG)
 
-  for (const pairStr of G10_PAIRS) {
-    const [base, quote] = pairStr.split('/')
-    const baseSignal  = signalMap[base]
-    const quoteSignal = signalMap[quote]
+  for (let i = 0; i < currencies.length; i++) {
+    for (let j = i + 1; j < currencies.length; j++) {
+      const a = readings.find(r => r.currency === currencies[i])
+      const b = readings.find(r => r.currency === currencies[j])
+      if (!a || !b) continue
 
-    if (!baseSignal || !quoteSignal) continue
+      const rankA = SIGNAL_RANK[a.signal] ?? 1
+      const rankB = SIGNAL_RANK[b.signal] ?? 1
+      const diff  = Math.abs(rankA - rankB)
+      if (diff < 1) continue
 
-    const baseOverheating = baseSignal === 'overheating'
-    const quoteEasing     = quoteSignal === 'easing' || quoteSignal === 'deflationary'
+      const [strong, weak] = rankA > rankB ? [a, b] : [b, a]
 
-    if (baseOverheating && quoteEasing) {
       pairs.push({
-        pair:                pairStr,
-        base_currency:       base,
-        quote_currency:      quote,
-        base_signal:         baseSignal,
-        quote_signal:        quoteSignal,
+        pair:                `${strong.currency}/${weak.currency}`,
+        base_currency:       strong.currency,
+        quote_currency:      weak.currency,
+        base_signal:         strong.signal,
+        quote_signal:        weak.signal,
         direction:           'long',
-        divergence_strength: quoteSignal === 'deflationary' ? 'strong' : 'moderate',
+        divergence_strength: diff >= 2 ? 'strong' : 'moderate',
         snapshot_date:       today,
         updated_at:          new Date().toISOString(),
       })

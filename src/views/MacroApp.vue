@@ -185,10 +185,10 @@ onUnmounted(() => clearInterval(timer))
                 <th>Base</th>
                 <th>Quote</th>
                 <th>Strength</th>
-                <th class="th-check">Base CPI ↑</th>
-                <th class="th-check">Quote CPI ↓</th>
-                <th class="th-check">Base labour ↓</th>
-                <th class="th-check">Quote labour ↑</th>
+                <th class="th-check">Base CPI</th>
+                <th class="th-check">Quote CPI</th>
+                <th class="th-check">Base Labour</th>
+                <th class="th-check">Quote Labour</th>
               </tr>
             </thead>
             <tbody>
@@ -211,10 +211,10 @@ onUnmounted(() => clearInterval(timer))
                   <span :class="'sig sig-' + p.quote_signal">{{ p.quote_currency }}: {{ p.quote_signal }}</span>
                 </td>
                 <td :class="'strength-' + p.divergence_strength">{{ p.divergence_strength === 'strong' ? 'strong' : 'mod' }}</td>
-                <td class="td-check"><span :class="p.checks.baseCpiRising   ? 'check yes' : 'check no'">{{ p.checks.baseCpiRising   ? '✓' : '✗' }}</span></td>
-                <td class="td-check"><span :class="p.checks.quoteCpiFalling  ? 'check yes' : 'check no'">{{ p.checks.quoteCpiFalling  ? '✓' : '✗' }}</span></td>
-                <td class="td-check"><span :class="p.checks.baseLabourTight  ? 'check yes' : 'check no'">{{ p.checks.baseLabourTight  ? '✓' : '✗' }}</span></td>
-                <td class="td-check"><span :class="p.checks.quoteLabourSoft  ? 'check yes' : 'check no'">{{ p.checks.quoteLabourSoft  ? '✓' : '✗' }}</span></td>
+                <td class="td-check"><span :class="p.checks.baseCpiRising  ? 'arrow up' : 'arrow down'">{{ p.checks.baseCpiRising  ? '↑' : '↓' }}</span></td>
+                <td class="td-check"><span :class="p.checks.quoteCpiFalling ? 'arrow up' : 'arrow down'">{{ p.checks.quoteCpiFalling ? '↓' : '↑' }}</span></td>
+                <td class="td-check"><span :class="p.checks.baseLabourTight ? 'arrow up' : 'arrow down'">{{ p.checks.baseLabourTight ? '↓' : '↑' }}</span></td>
+                <td class="td-check"><span :class="p.checks.quoteLabourSoft ? 'arrow up' : 'arrow down'">{{ p.checks.quoteLabourSoft ? '↑' : '↓' }}</span></td>
               </tr>
             </tbody>
           </table>
@@ -486,14 +486,14 @@ tr:hover td { background: #fafaf8; }
   text-align: center;
 }
 
-.check {
+.arrow {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
 }
 
-.check.yes { color: #1a7a4a; }
-.check.no  { color: #ddd; }
+.arrow.up   { color: #1a7a4a; }
+.arrow.down { color: #b03030; }
 
 .strength-strong   { font-weight: 600; color: #b05a00; font-size: 12px; }
 .strength-moderate { color: #aaa; font-size: 12px; }

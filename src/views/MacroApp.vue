@@ -43,18 +43,44 @@ const lastUpdatedFormatted = computed(() => {
 
 const pairSearch = ref('')
 
+function trendClass(trend: string, goodTrend: string): string {
+  if (trend === goodTrend) return 'arrow good'
+  if (trend === 'flat')    return 'arrow flat'
+  return 'arrow bad'
+}
+
+function trendArrowChar(trend: string): string {
+  return trend === 'rising' || trend === 'softening' ? '↑'
+       : trend === 'falling' || trend === 'tightening' ? '↓'
+       : '→'
+}
+
 function enrichPair(p: typeof pairs.value[number]) {
   const base  = readings.value.find(r => r.currency === p.base_currency)
   const quote = readings.value.find(r => r.currency === p.quote_currency)
+
+  const baseCpiTrend    = base?.cpi_trend    ?? 'flat'
+  const quoteCpiTrend   = quote?.cpi_trend   ?? 'flat'
+  const baseLabourTrend = base?.labour_trend ?? 'flat'
+  const quoteLabourTrend = quote?.labour_trend ?? 'flat'
+
   const checks = {
-    baseCpiRising:     base?.cpi_trend    === 'rising',
-    quoteCpiFalling:   quote?.cpi_trend   === 'falling',
-    baseLabourTight:   base?.labour_trend === 'tightening',
-    quoteLabourSoft:   quote?.labour_trend === 'softening',
+    baseCpiRising:   baseCpiTrend    === 'rising',
+    quoteCpiFalling: quoteCpiTrend   === 'falling',
+    baseLabourTight: baseLabourTrend === 'tightening',
+    quoteLabourSoft: quoteLabourTrend === 'softening',
   }
+
+  const trends = {
+    baseCpi:    { cls: trendClass(baseCpiTrend,    'rising'),     arrow: trendArrowChar(baseCpiTrend)    },
+    quoteCpi:   { cls: trendClass(quoteCpiTrend,   'falling'),    arrow: trendArrowChar(quoteCpiTrend)   },
+    baseLabour: { cls: trendClass(baseLabourTrend, 'tightening'), arrow: trendArrowChar(baseLabourTrend) },
+    quoteLabour:{ cls: trendClass(quoteLabourTrend,'softening'),  arrow: trendArrowChar(quoteLabourTrend)},
+  }
+
   const score = (p.divergence_strength === 'strong' ? 2 : 1)
     + Object.values(checks).filter(Boolean).length
-  return { ...p, checks, score }
+  return { ...p, checks, trends, score }
 }
 
 const scoredPairs = computed(() => {
@@ -211,10 +237,10 @@ onUnmounted(() => clearInterval(timer))
                   <span :class="'sig sig-' + p.quote_signal">{{ p.quote_currency }}: {{ p.quote_signal }}</span>
                 </td>
                 <td :class="'strength-' + p.divergence_strength">{{ p.divergence_strength === 'strong' ? 'strong' : 'mod' }}</td>
-                <td class="td-check"><span :class="p.checks.baseCpiRising  ? 'arrow up' : 'arrow down'">{{ p.checks.baseCpiRising  ? '↑' : '↓' }}</span></td>
-                <td class="td-check"><span :class="p.checks.quoteCpiFalling ? 'arrow up' : 'arrow down'">{{ p.checks.quoteCpiFalling ? '↓' : '↑' }}</span></td>
-                <td class="td-check"><span :class="p.checks.baseLabourTight ? 'arrow up' : 'arrow down'">{{ p.checks.baseLabourTight ? '↓' : '↑' }}</span></td>
-                <td class="td-check"><span :class="p.checks.quoteLabourSoft ? 'arrow up' : 'arrow down'">{{ p.checks.quoteLabourSoft ? '↑' : '↓' }}</span></td>
+                <td class="td-check"><span :class="p.trends.baseCpi.cls">{{ p.trends.baseCpi.arrow }}</span></td>
+                <td class="td-check"><span :class="p.trends.quoteCpi.cls">{{ p.trends.quoteCpi.arrow }}</span></td>
+                <td class="td-check"><span :class="p.trends.baseLabour.cls">{{ p.trends.baseLabour.arrow }}</span></td>
+                <td class="td-check"><span :class="p.trends.quoteLabour.cls">{{ p.trends.quoteLabour.arrow }}</span></td>
               </tr>
             </tbody>
           </table>
@@ -492,8 +518,9 @@ tr:hover td { background: #fafaf8; }
   font-weight: 600;
 }
 
-.arrow.up   { color: #1a7a4a; }
-.arrow.down { color: #b03030; }
+.arrow.good { color: #1a7a4a; }
+.arrow.bad  { color: #b03030; }
+.arrow.flat { color: #ccc; }
 
 .strength-strong   { font-weight: 600; color: #b05a00; font-size: 12px; }
 .strength-moderate { color: #aaa; font-size: 12px; }

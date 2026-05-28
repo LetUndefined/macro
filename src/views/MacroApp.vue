@@ -43,15 +43,18 @@ const lastUpdatedFormatted = computed(() => {
 
 const pairSearch = ref('')
 
-function convictionScore(p: { base_currency: string; quote_currency: string; divergence_strength: string }): number {
+function enrichPair(p: typeof pairs.value[number]) {
   const base  = readings.value.find(r => r.currency === p.base_currency)
   const quote = readings.value.find(r => r.currency === p.quote_currency)
-  let score = p.divergence_strength === 'strong' ? 2 : 1
-  if (base?.cpi_trend    === 'rising')     score++
-  if (quote?.cpi_trend   === 'falling')    score++
-  if (base?.labour_trend === 'tightening') score++
-  if (quote?.labour_trend === 'softening') score++
-  return score
+  const checks = {
+    baseCpiRising:     base?.cpi_trend    === 'rising',
+    quoteCpiFalling:   quote?.cpi_trend   === 'falling',
+    baseLabourTight:   base?.labour_trend === 'tightening',
+    quoteLabourSoft:   quote?.labour_trend === 'softening',
+  }
+  const score = (p.divergence_strength === 'strong' ? 2 : 1)
+    + Object.values(checks).filter(Boolean).length
+  return { ...p, checks, score }
 }
 
 const scoredPairs = computed(() => {
@@ -59,9 +62,8 @@ const scoredPairs = computed(() => {
   const filtered = pairs.value.filter(p =>
     !q || p.pair.includes(q) || p.base_currency.includes(q) || p.quote_currency.includes(q)
   )
-  const withScore = filtered.map(p => ({ ...p, score: convictionScore(p) }))
+  const withScore = filtered.map(enrichPair)
   withScore.sort((a, b) => b.score - a.score || a.pair.localeCompare(b.pair))
-
   const topScore = withScore[0]?.score ?? 0
   return withScore.map(p => ({ ...p, highlight: p.score === topScore && topScore >= 4 }))
 })
@@ -173,18 +175,6 @@ onUnmounted(() => clearInterval(timer))
             spellcheck="false"
           />
         </div>
-        <div class="conviction-legend">
-          <span class="legend-label">Conviction score:</span>
-          <span class="legend-item"><span class="legend-dot filled" /><span class="legend-dot filled" /> Strong divergence</span>
-          <span class="legend-sep">·</span>
-          <span class="legend-item"><span class="legend-dot filled" /> Base CPI rising</span>
-          <span class="legend-sep">·</span>
-          <span class="legend-item"><span class="legend-dot filled" /> Quote CPI falling</span>
-          <span class="legend-sep">·</span>
-          <span class="legend-item"><span class="legend-dot filled" /> Base labour tightening</span>
-          <span class="legend-sep">·</span>
-          <span class="legend-item"><span class="legend-dot filled" /> Quote labour softening</span>
-        </div>
         <p v-if="scoredPairs.length === 0" class="muted">No matching pairs.</p>
         <div v-else class="table-wrap">
           <table>
@@ -195,7 +185,10 @@ onUnmounted(() => clearInterval(timer))
                 <th>Base</th>
                 <th>Quote</th>
                 <th>Strength</th>
-                <th>Conviction</th>
+                <th class="th-check">Base CPI ↑</th>
+                <th class="th-check">Quote CPI ↓</th>
+                <th class="th-check">Base labour ↓</th>
+                <th class="th-check">Quote labour ↑</th>
               </tr>
             </thead>
             <tbody>
@@ -217,17 +210,11 @@ onUnmounted(() => clearInterval(timer))
                 <td>
                   <span :class="'sig sig-' + p.quote_signal">{{ p.quote_currency }}: {{ p.quote_signal }}</span>
                 </td>
-                <td :class="'strength-' + p.divergence_strength">{{ p.divergence_strength }}</td>
-                <td class="td-score">
-                  <span class="score-dots">
-                    <span
-                      v-for="i in 6"
-                      :key="i"
-                      class="dot"
-                      :class="{ filled: i <= p.score }"
-                    />
-                  </span>
-                </td>
+                <td :class="'strength-' + p.divergence_strength">{{ p.divergence_strength === 'strong' ? 'strong' : 'mod' }}</td>
+                <td class="td-check"><span :class="p.checks.baseCpiRising   ? 'check yes' : 'check no'">{{ p.checks.baseCpiRising   ? '✓' : '✗' }}</span></td>
+                <td class="td-check"><span :class="p.checks.quoteCpiFalling  ? 'check yes' : 'check no'">{{ p.checks.quoteCpiFalling  ? '✓' : '✗' }}</span></td>
+                <td class="td-check"><span :class="p.checks.baseLabourTight  ? 'check yes' : 'check no'">{{ p.checks.baseLabourTight  ? '✓' : '✗' }}</span></td>
+                <td class="td-check"><span :class="p.checks.quoteLabourSoft  ? 'check yes' : 'check no'">{{ p.checks.quoteLabourSoft  ? '✓' : '✗' }}</span></td>
               </tr>
             </tbody>
           </table>
@@ -488,59 +475,28 @@ tr:hover td { background: #fafaf8; }
   vertical-align: middle;
 }
 
-.td-score { white-space: nowrap; }
 
-.score-dots {
-  display: inline-flex;
-  gap: 3px;
-  align-items: center;
+.th-check {
+  text-align: center;
+  font-size: 10px;
+  white-space: nowrap;
 }
 
-.dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #e8e8e4;
+.td-check {
+  text-align: center;
 }
 
-.dot.filled { background: #b05a00; }
-
-.conviction-legend {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px 10px;
-  margin-bottom: 12px;
-  font-size: 11px;
-  color: #aaa;
-}
-
-.legend-label {
+.check {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
   font-weight: 600;
-  color: #999;
-  margin-right: 2px;
 }
 
-.legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
+.check.yes { color: #1a7a4a; }
+.check.no  { color: #ddd; }
 
-.legend-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #e8e8e4;
-}
-
-.legend-dot.filled { background: #b05a00; }
-
-.legend-sep { color: #ddd; }
-
-.strength-strong   { font-weight: 600; color: #b05a00; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
-.strength-moderate { color: #aaa; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+.strength-strong   { font-weight: 600; color: #b05a00; font-size: 12px; }
+.strength-moderate { color: #aaa; font-size: 12px; }
 
 /* ── Misc ── */
 .loading { color: #999; padding: 40px 0; }

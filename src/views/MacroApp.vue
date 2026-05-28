@@ -41,13 +41,18 @@ const lastUpdatedFormatted = computed(() => {
   })
 })
 
-const sortedPairs = computed(() =>
-  [...pairs.value].sort((a, b) =>
-    a.divergence_strength === b.divergence_strength
-      ? a.pair.localeCompare(b.pair)
-      : a.divergence_strength === 'strong' ? -1 : 1
-  )
-)
+const pairSearch = ref('')
+
+const sortedPairs = computed(() => {
+  const q = pairSearch.value.trim().toUpperCase()
+  return [...pairs.value]
+    .filter(p => !q || p.pair.includes(q) || p.base_currency.includes(q) || p.quote_currency.includes(q))
+    .sort((a, b) =>
+      a.divergence_strength === b.divergence_strength
+        ? a.pair.localeCompare(b.pair)
+        : a.divergence_strength === 'strong' ? -1 : 1
+    )
+})
 
 function fmt(v: number | null) {
   return v === null ? '—' : v.toFixed(2) + '%'
@@ -147,8 +152,16 @@ onUnmounted(() => clearInterval(timer))
 
       <!-- Divergence pairs -->
       <section class="section">
-        <h2 class="section-title">Divergence Pairs</h2>
-        <p v-if="sortedPairs.length === 0" class="muted">No qualifying pairs today.</p>
+        <div class="section-header">
+          <h2 class="section-title">Divergence Pairs</h2>
+          <input
+            v-model="pairSearch"
+            class="pair-search"
+            placeholder="Filter by pair or currency…"
+            spellcheck="false"
+          />
+        </div>
+        <p v-if="sortedPairs.length === 0" class="muted">No matching pairs.</p>
         <div v-else class="table-wrap">
           <table>
             <thead>
@@ -279,14 +292,36 @@ body {
 /* ── Sections ── */
 .section { margin-bottom: 48px; }
 
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 16px;
+}
+
 .section-title {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: #999;
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
+
+.pair-search {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+  color: #333;
+  outline: none;
+  width: 220px;
+  transition: border-color 0.15s;
+}
+.pair-search:focus { border-color: #999; }
 
 /* ── Tables ── */
 .table-wrap { overflow-x: auto; }

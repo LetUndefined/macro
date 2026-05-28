@@ -173,6 +173,18 @@ onUnmounted(() => clearInterval(timer))
             spellcheck="false"
           />
         </div>
+        <div class="conviction-legend">
+          <span class="legend-label">Conviction score:</span>
+          <span class="legend-item"><span class="legend-dot filled" /><span class="legend-dot filled" /> Strong divergence</span>
+          <span class="legend-sep">·</span>
+          <span class="legend-item"><span class="legend-dot filled" /> Base CPI rising</span>
+          <span class="legend-sep">·</span>
+          <span class="legend-item"><span class="legend-dot filled" /> Quote CPI falling</span>
+          <span class="legend-sep">·</span>
+          <span class="legend-item"><span class="legend-dot filled" /> Base labour tightening</span>
+          <span class="legend-sep">·</span>
+          <span class="legend-item"><span class="legend-dot filled" /> Quote labour softening</span>
+        </div>
         <p v-if="scoredPairs.length === 0" class="muted">No matching pairs.</p>
         <div v-else class="table-wrap">
           <table>
@@ -492,6 +504,40 @@ tr:hover td { background: #fafaf8; }
 }
 
 .dot.filled { background: #b05a00; }
+
+.conviction-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-bottom: 12px;
+  font-size: 11px;
+  color: #aaa;
+}
+
+.legend-label {
+  font-weight: 600;
+  color: #999;
+  margin-right: 2px;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e8e8e4;
+}
+
+.legend-dot.filled { background: #b05a00; }
+
+.legend-sep { color: #ddd; }
 
 .strength-strong   { font-weight: 600; color: #b05a00; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
 .strength-moderate { color: #aaa; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }

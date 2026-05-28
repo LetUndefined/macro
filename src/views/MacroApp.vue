@@ -190,6 +190,7 @@ onUnmounted(() => clearInterval(timer))
             spellcheck="false"
           />
         </div>
+        <p class="pairs-note">Only showing pairs where signal diverges — same-signal pairs (e.g. EUR/USD both elevated) are excluded.</p>
         <p v-if="scoredPairs.length === 0" class="muted">No matching pairs.</p>
         <div v-else class="table-wrap">
           <table>
@@ -470,6 +471,12 @@ tr:hover td { background: #fafaf8; }
 
 .pair-strong td { background: #fdfcf7; }
 .pair-strong .td-pair { color: #111; }
+
+.pairs-note {
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 12px;
+}
 
 .pair-highlight td { background: #fffbf0; }
 .pair-highlight .td-pair { color: #111; font-weight: 600; }

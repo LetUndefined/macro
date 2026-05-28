@@ -167,7 +167,9 @@ onUnmounted(() => clearInterval(timer))
                 :class="{ 'pair-strong': p.divergence_strength === 'strong' }"
               >
                 <td class="td-pair">{{ p.pair }}</td>
-                <td class="td-long">↑ Long</td>
+                <td :class="p.direction === 'long' ? 'td-long' : 'td-short'">
+                  {{ p.direction === 'long' ? '↑ Long' : '↓ Short' }}
+                </td>
                 <td>
                   <span :class="'sig sig-' + p.base_signal">{{ p.base_currency }}: {{ p.base_signal }}</span>
                 </td>
@@ -383,6 +385,12 @@ tr:hover td { background: #fafaf8; }
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
   color: #1a7a4a;
+}
+
+.td-short {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: #b03030;
 }
 
 .pair-strong td { background: #fdfcf7; }

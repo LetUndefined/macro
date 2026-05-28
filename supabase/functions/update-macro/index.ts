@@ -83,6 +83,10 @@ const SIGNAL_RANK: Record<string, number> = {
   overheating: 3, elevated: 2, easing: 1, deflationary: 0,
 }
 
+const FX_HIERARCHY: Record<string, number> = {
+  EUR: 0, GBP: 1, AUD: 2, NZD: 3, USD: 4, CAD: 5, CHF: 6, NOK: 7, SEK: 8, JPY: 9,
+}
+
 function derivePairs(readings: Array<{ currency: string; signal: string; snapshot_date: string }>) {
   const pairs: Array<{
     pair: string; base_currency: string; quote_currency: string
@@ -107,13 +111,18 @@ function derivePairs(readings: Array<{ currency: string; signal: string; snapsho
       const [strong, weak] = rankA > rankB ? [a, b] : [b, a]
       const strength = diff >= 2 ? 'strong' : 'moderate'
 
+      const hierA = FX_HIERARCHY[a.currency] ?? 99
+      const hierB = FX_HIERARCHY[b.currency] ?? 99
+      const [base, quote] = hierA < hierB ? [a, b] : [b, a]
+      const direction = base.currency === strong.currency ? 'long' : 'short'
+
       pairs.push({
-        pair: `${strong.currency}/${weak.currency}`,
-        base_currency: strong.currency,
-        quote_currency: weak.currency,
-        base_signal: strong.signal,
-        quote_signal: weak.signal,
-        direction: 'long',
+        pair: `${base.currency}/${quote.currency}`,
+        base_currency: base.currency,
+        quote_currency: quote.currency,
+        base_signal: base.signal,
+        quote_signal: quote.signal,
+        direction,
         divergence_strength: strength,
         snapshot_date: snapshotDate,
         updated_at: new Date().toISOString(),

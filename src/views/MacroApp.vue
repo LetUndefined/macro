@@ -43,15 +43,27 @@ const lastUpdatedFormatted = computed(() => {
 
 const pairSearch = ref('')
 
-const sortedPairs = computed(() => {
+function convictionScore(p: { base_currency: string; quote_currency: string; divergence_strength: string }): number {
+  const base  = readings.value.find(r => r.currency === p.base_currency)
+  const quote = readings.value.find(r => r.currency === p.quote_currency)
+  let score = p.divergence_strength === 'strong' ? 2 : 1
+  if (base?.cpi_trend    === 'rising')     score++
+  if (quote?.cpi_trend   === 'falling')    score++
+  if (base?.labour_trend === 'tightening') score++
+  if (quote?.labour_trend === 'softening') score++
+  return score
+}
+
+const scoredPairs = computed(() => {
   const q = pairSearch.value.trim().toUpperCase()
-  return [...pairs.value]
-    .filter(p => !q || p.pair.includes(q) || p.base_currency.includes(q) || p.quote_currency.includes(q))
-    .sort((a, b) =>
-      a.divergence_strength === b.divergence_strength
-        ? a.pair.localeCompare(b.pair)
-        : a.divergence_strength === 'strong' ? -1 : 1
-    )
+  const filtered = pairs.value.filter(p =>
+    !q || p.pair.includes(q) || p.base_currency.includes(q) || p.quote_currency.includes(q)
+  )
+  const withScore = filtered.map(p => ({ ...p, score: convictionScore(p) }))
+  withScore.sort((a, b) => b.score - a.score || a.pair.localeCompare(b.pair))
+
+  const topScore = withScore[0]?.score ?? 0
+  return withScore.map(p => ({ ...p, highlight: p.score === topScore && topScore >= 4 }))
 })
 
 function fmt(v: number | null) {
@@ -161,7 +173,7 @@ onUnmounted(() => clearInterval(timer))
             spellcheck="false"
           />
         </div>
-        <p v-if="sortedPairs.length === 0" class="muted">No matching pairs.</p>
+        <p v-if="scoredPairs.length === 0" class="muted">No matching pairs.</p>
         <div v-else class="table-wrap">
           <table>
             <thead>
@@ -171,15 +183,19 @@ onUnmounted(() => clearInterval(timer))
                 <th>Base</th>
                 <th>Quote</th>
                 <th>Strength</th>
+                <th>Conviction</th>
               </tr>
             </thead>
             <tbody>
               <tr
-                v-for="p in sortedPairs"
+                v-for="p in scoredPairs"
                 :key="p.pair"
-                :class="{ 'pair-strong': p.divergence_strength === 'strong' }"
+                :class="{ 'pair-strong': p.divergence_strength === 'strong', 'pair-highlight': p.highlight }"
               >
-                <td class="td-pair">{{ p.pair }}</td>
+                <td class="td-pair">
+                  {{ p.pair }}
+                  <span v-if="p.highlight" class="best-tag">best</span>
+                </td>
                 <td :class="p.direction === 'long' ? 'td-long' : 'td-short'">
                   {{ p.direction === 'long' ? '↑ Long' : '↓ Short' }}
                 </td>
@@ -190,6 +206,16 @@ onUnmounted(() => clearInterval(timer))
                   <span :class="'sig sig-' + p.quote_signal">{{ p.quote_currency }}: {{ p.quote_signal }}</span>
                 </td>
                 <td :class="'strength-' + p.divergence_strength">{{ p.divergence_strength }}</td>
+                <td class="td-score">
+                  <span class="score-dots">
+                    <span
+                      v-for="i in 6"
+                      :key="i"
+                      class="dot"
+                      :class="{ filled: i <= p.score }"
+                    />
+                  </span>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -430,6 +456,42 @@ tr:hover td { background: #fafaf8; }
 
 .pair-strong td { background: #fdfcf7; }
 .pair-strong .td-pair { color: #111; }
+
+.pair-highlight td { background: #fffbf0; }
+.pair-highlight .td-pair { color: #111; font-weight: 600; }
+
+.best-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #b05a00;
+  background: #fff3e0;
+  border: 1px solid #f0c070;
+  border-radius: 3px;
+  vertical-align: middle;
+}
+
+.td-score { white-space: nowrap; }
+
+.score-dots {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e8e8e4;
+}
+
+.dot.filled { background: #b05a00; }
 
 .strength-strong   { font-weight: 600; color: #b05a00; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
 .strength-moderate { color: #aaa; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }

@@ -8,6 +8,34 @@ const loading   = ref(false)
 const updating  = ref(false)
 const error     = ref<string | null>(null)
 
+// Tracks which currencies had a value change on last refresh
+// e.g. { USD: { core_cpi: { from: 2.5, to: 2.8 }, signal: { from: 'elevated', to: 'overheating' } } }
+const changes = ref<Record<string, Record<string, { from: unknown; to: unknown }>>>({})
+
+const TRACKED = ['core_cpi', 'unemployment', 'signal', 'cpi_trend', 'labour_trend'] as const
+
+function diffReadings(prev: MacroReading[], next: MacroReading[]) {
+  const result: Record<string, Record<string, { from: unknown; to: unknown }>> = {}
+
+  for (const nextRow of next) {
+    const prevRow = prev.find(r => r.currency === nextRow.currency)
+    if (!prevRow) continue
+
+    const fieldChanges: Record<string, { from: unknown; to: unknown }> = {}
+    for (const field of TRACKED) {
+      const from = prevRow[field]
+      const to   = nextRow[field]
+      if (from !== to) fieldChanges[field] = { from, to }
+    }
+
+    if (Object.keys(fieldChanges).length > 0) {
+      result[nextRow.currency] = fieldChanges
+    }
+  }
+
+  return result
+}
+
 export function useMacro() {
   const lastUpdated = computed<string | null>(() => {
     if (readings.value.length === 0) return null
@@ -35,7 +63,6 @@ export function useMacro() {
     loading.value = true
     error.value   = null
     try {
-      // Find the most recent snapshot date
       const { data: latest, error: latestErr } = await supabase
         .from('macro_readings')
         .select('snapshot_date')
@@ -70,9 +97,26 @@ export function useMacro() {
       if (readingsResult.error) throw readingsResult.error
       if (pairsResult.error)   throw pairsResult.error
 
-      readings.value = readingsResult.data ?? []
-      pairs.value    = pairsResult.data    ?? []
-      console.log(`[macro] data loaded — snapshot: ${date}, ${readings.value.length} readings, ${pairs.value.length} pairs`)
+      const newReadings = readingsResult.data ?? []
+      const diff = diffReadings(readings.value, newReadings)
+
+      if (Object.keys(diff).length > 0) {
+        console.group('[macro] data changed')
+        for (const [currency, fields] of Object.entries(diff)) {
+          for (const [field, { from, to }] of Object.entries(fields)) {
+            console.log(`  ${currency} ${field}: ${from} → ${to}`)
+          }
+        }
+        console.groupEnd()
+      } else {
+        console.log('[macro] data loaded — no changes from previous snapshot')
+      }
+
+      changes.value  = diff
+      readings.value = newReadings
+      pairs.value    = pairsResult.data ?? []
+
+      console.log(`[macro] snapshot: ${date}, ${readings.value.length} readings, ${pairs.value.length} pairs`)
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e)
       error.value = msg
@@ -88,6 +132,7 @@ export function useMacro() {
     loading,
     updating,
     error,
+    changes,
     lastUpdated,
     fetchMacro,
     triggerUpdate,

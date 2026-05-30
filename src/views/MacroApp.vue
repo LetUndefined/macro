@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useMacro } from '@/composables/useMacro'
 
-const { readings, pairs, loading, updating, lastUpdated, fetchMacro, triggerUpdate } = useMacro()
+const { readings, pairs, loading, updating, changes, lastUpdated, fetchMacro, triggerUpdate } = useMacro()
 
 // ── Countdown to next 06:00 UTC fetch ───────────────────────────────────────
 
@@ -166,24 +166,41 @@ onUnmounted(() => clearInterval(timer))
               </tr>
             </thead>
             <tbody>
-              <tr v-for="r in readings" :key="r.currency" :class="'row-' + r.signal">
+              <tr
+                v-for="r in readings"
+                :key="r.currency"
+                :class="['row-' + r.signal, { 'row-changed': changes[r.currency] }]"
+              >
                 <td class="td-currency">
                   <span class="flag">{{ FLAGS[r.currency] }}</span>
                   <span class="currency-code">{{ r.currency }}</span>
                 </td>
                 <td class="td-cb">{{ r.central_bank }}</td>
                 <td class="td-num">{{ r.cb_target.toFixed(1) }}%</td>
-                <td class="td-num cpi-val" :class="'cpi-' + r.signal">{{ fmt(r.core_cpi) }}</td>
+                <td class="td-num cpi-val" :class="['cpi-' + r.signal, { 'cell-changed': changes[r.currency]?.core_cpi }]">
+                  {{ fmt(r.core_cpi) }}
+                  <span v-if="changes[r.currency]?.core_cpi" class="prev-val">
+                    was {{ fmt(changes[r.currency].core_cpi.from as number | null) }}
+                  </span>
+                </td>
                 <td class="td-num dev" :class="'dev-' + r.signal">{{ deviation(r.core_cpi, r.cb_target) }}</td>
                 <td class="td-trend">
                   <span :class="'trend-' + r.cpi_trend">{{ trendArrow(r.cpi_trend) }}</span>
                 </td>
-                <td class="td-num">{{ fmt(r.unemployment) }}</td>
+                <td class="td-num" :class="{ 'cell-changed': changes[r.currency]?.unemployment }">
+                  {{ fmt(r.unemployment) }}
+                  <span v-if="changes[r.currency]?.unemployment" class="prev-val">
+                    was {{ fmt(changes[r.currency].unemployment.from as number | null) }}
+                  </span>
+                </td>
                 <td class="td-trend">
                   <span :class="'labour-' + r.labour_trend">{{ labourArrow(r.labour_trend) }}</span>
                 </td>
-                <td class="td-signal">
+                <td class="td-signal" :class="{ 'cell-changed': changes[r.currency]?.signal }">
                   <span :class="'sig sig-' + r.signal">{{ r.signal }}</span>
+                  <span v-if="changes[r.currency]?.signal" class="prev-val">
+                    was {{ changes[r.currency].signal.from as string }}
+                  </span>
                 </td>
               </tr>
             </tbody>
@@ -532,6 +549,29 @@ tr:hover td { background: #fafaf8; }
 
 .strength-strong   { font-weight: 600; color: #b05a00; font-size: 12px; }
 .strength-moderate { color: #aaa; font-size: 12px; }
+
+/* ── Change highlights ── */
+@keyframes flash-row {
+  0%   { background: #fffbe6; }
+  100% { background: transparent; }
+}
+
+.row-changed td {
+  animation: flash-row 2s ease-out forwards;
+}
+
+.cell-changed {
+  position: relative;
+}
+
+.prev-val {
+  display: block;
+  font-size: 10px;
+  color: #bbb;
+  font-family: 'JetBrains Mono', monospace;
+  margin-top: 1px;
+  text-decoration: line-through;
+}
 
 /* ── Misc ── */
 .loading { color: #999; padding: 40px 0; }

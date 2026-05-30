@@ -18,8 +18,10 @@ export function useMacro() {
     updating.value = true
     error.value    = null
     try {
+      console.log('[macro] triggering edge function update…')
       const { error: fnError } = await supabase.functions.invoke('update-macro')
       if (fnError) throw fnError
+      console.log('[macro] edge function complete, fetching fresh data…')
       await fetchMacro()
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : String(e)
@@ -70,6 +72,7 @@ export function useMacro() {
 
       readings.value = readingsResult.data ?? []
       pairs.value    = pairsResult.data    ?? []
+      console.log(`[macro] data loaded — snapshot: ${date}, ${readings.value.length} readings, ${pairs.value.length} pairs`)
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e)
       error.value = msg
